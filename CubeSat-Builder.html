@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CubeSat Builder</title>
+<style>
+:root {
+    --bg: #d4d0c8; --face: #d4d0c8; --dark: #404040; --shadow: #808080;
+    --highlight: #ffffff; --title: #0a246a; --title-text: #fff; --title-inactive: #7f9db9;
+    --select: #0a246a; --select-text: #fff; --field: #fff; --field-text: #000; --btn-face: #d4d0c8;
+    --green: #008000; --orange: #ff8c00; --red: #ff0000;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Tahoma','MS Sans Serif',Arial,sans-serif; background:var(--bg); color:#000; font-size:11px; overflow:hidden; height:100vh; display:flex; flex-direction:column; }
+.title-bar { background:linear-gradient(to right,var(--title),var(--title-inactive)); color:var(--title-text); padding:3px 6px; font-size:12px; font-weight:700; display:flex; align-items:center; gap:6px; flex-shrink:0; user-select:none; }
+.title-bar .title-text { flex:1; }
+.menu-bar { background:var(--face); padding:1px 2px; display:flex; gap:0; border-bottom:1px solid var(--shadow); flex-shrink:0; }
+.menu-item { padding:2px 8px; cursor:pointer; font-size:11px; }
+.menu-item:hover { background:var(--select); color:var(--select-text); }
+.toolbar { background:var(--face); padding:3px 4px; display:flex; align-items:center; gap:2px; border-bottom:1px solid var(--shadow); border-top:1px solid var(--highlight); flex-shrink:0; flex-wrap:wrap; }
+.toolbar-sep { width:1px; height:22px; margin:0 3px; border-left:1px solid var(--shadow); border-right:1px solid var(--highlight); }
+.btn { padding:2px 10px; height:22px; background:var(--btn-face); color:#000; cursor:pointer; font-size:11px; font-family:inherit; white-space:nowrap; border-top:1px solid var(--highlight); border-left:1px solid var(--highlight); border-right:1px solid var(--dark); border-bottom:1px solid var(--dark); display:inline-flex; align-items:center; gap:4px; }
+.btn:hover { background:#e0dcd4; }
+.btn:active { border-top:1px solid var(--dark); border-left:1px solid var(--dark); border-right:1px solid var(--highlight); border-bottom:1px solid var(--highlight); }
+.toolbar .info { margin-left:auto; font-size:11px; color:#333; padding:0 8px; font-weight:700; }
+.tabs { background:var(--face); padding:4px 4px 0; display:flex; gap:0; flex-shrink:0; }
+.tab { padding:3px 12px; cursor:pointer; font-size:11px; background:var(--face); border-top:1px solid var(--highlight); border-left:1px solid var(--highlight); border-right:1px solid var(--dark); border-bottom:none; margin-right:1px; position:relative; top:1px; border-radius:2px 2px 0 0; }
+.tab:hover { background:#e0dcd4; }
+.tab.active { background:var(--field); border-bottom:1px solid var(--field); font-weight:700; z-index:5; }
+.content { flex:1; overflow:hidden; display:flex; flex-direction:column; background:var(--field); border-top:1px solid var(--dark); border-left:1px solid var(--dark); border-right:1px solid var(--highlight); border-bottom:1px solid var(--highlight); }
+.tab-view { padding:12px; overflow:auto; flex:1; background:var(--field); }
+.hidden { display:none !important; }
+.status-bar { display:flex; align-items:center; padding:2px; background:var(--face); flex-shrink:0; gap:2px; border-top:1px solid var(--highlight); }
+.status-panel { padding:1px 8px; font-size:11px; border-top:1px solid var(--dark); border-left:1px solid var(--dark); border-right:1px solid var(--highlight); border-bottom:1px solid var(--highlight); background:var(--face); white-space:nowrap; overflow:hidden; }
+.status-panel:first-child { flex:1; }
+.welcome { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--field); }
+.welcome h1 { font-size:20px; color:var(--title); margin-bottom:6px; }
+.welcome p { margin-bottom:16px; color:#333; font-size:12px; text-align:center; max-width:500px; }
+.summary-cards { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+.card { background:var(--face); border-top:1px solid var(--highlight); border-left:1px solid var(--highlight); border-right:1px solid var(--dark); border-bottom:1px solid var(--dark); padding:8px 14px; min-width:150px; }
+.card h3 { font-size:10px; color:#555; text-transform:uppercase; margin-bottom:4px; }
+.card .value { font-size:22px; font-weight:700; color:var(--title); }
+.card .sub { font-size:10px; color:#555; margin-top:2px; }
+.card.warn .value { color:var(--orange); }
+.card.danger .value { color:var(--red); }
+.card.ok .value { color:var(--green); }
+.ref-table { border:1px solid var(--shadow); padding:12px; margin-bottom:12px; background:var(--field); position:relative; }
+.ref-table h3 { font-size:11px; margin-bottom:8px; color:var(--title); background:var(--field); display:inline-block; padding:0 4px; position:relative; top:-20px; margin-bottom:-12px; }
+.ref-table table { width:100%; border-collapse:collapse; }
+.ref-table th { background:var(--btn-face); font-weight:700; text-align:left; border-top:1px solid var(--highlight); border-left:1px solid var(--highlight); border-right:1px solid var(--dark); border-bottom:1px solid var(--dark); }
+.ref-table td, .ref-table th { padding:2px 8px; font-size:11px; }
+.ref-table td { border-bottom:1px solid #e0dcd4; }
+.ref-table tr:hover td { background:#c8daf0; }
+.ref-table tr.selected-row td { background:var(--select); color:var(--select-text); }
+.tool-panel { background:var(--face); border:1px solid var(--shadow); padding:12px; margin-bottom:12px; }
+.tool-panel h3 { font-size:11px; color:var(--title); margin-bottom:8px; font-weight:700; }
+.tool-panel label { font-size:11px; margin-right:4px; }
+.tool-panel input, .tool-panel select { height:20px; font-size:11px; font-family:inherit; border:1px inset; padding:1px 4px; }
+.tool-panel input[type=number] { width:70px; }
+.tool-panel select { min-width:120px; }
+.margin-ok { color:var(--green); font-weight:700; }
+.margin-warn { color:var(--orange); font-weight:700; }
+.margin-bad { color:var(--red); font-weight:700; }
+.link-ok { color:var(--green); font-weight:700; }
+.link-bad { color:var(--red); font-weight:700; }
+::-webkit-scrollbar { width:16px; height:16px; }
+::-webkit-scrollbar-track { background:#e0dcd4; border:1px solid #b0a898; }
+::-webkit-scrollbar-thumb { background:var(--btn-face); border-top:1px solid var(--highlight); border-left:1px solid var(--highlight); border-right:1px solid var(--dark); border-bottom:1px solid var(--dark); }
+table { width:100%; border-collapse:collapse; }
+thead th { position:sticky; top:0; z-index:10; background:var(--btn-face); padding:2px 6px; text-align:left; font-weight:700; font-size:11px; border-top:1px solid var(--highlight); border-left:1px solid var(--highlight); border-right:1px solid var(--dark); border-bottom:1px solid var(--dark); white-space:nowrap; }
+tbody td { padding:1px 6px; border-bottom:1px solid #e0dcd4; font-size:11px; white-space:nowrap; }
+tbody tr:nth-child(even) { background:#f0efe8; }
+tbody tr:hover { background:#c8daf0; }
+</style>
+</head>
+<body>
+<div class="title-bar">
+    <span class="title-text">CubeSat Builder - [Subsystem Sizing, BOM & Budget Tool]</span>
+</div>
+<div class="menu-bar">
+    <span class="menu-item" onclick="switchTab('mission')">Mission</span>
+    <span class="menu-item" onclick="switchTab('power')">Power</span>
+    <span class="menu-item" onclick="switchTab('comms')">Comms</span>
+    <span class="menu-item" onclick="switchTab('mass')">Mass</span>
+    <span class="menu-item" onclick="switchTab('bom')">BOM</span>
+    <span class="menu-item" onclick="exportExcel()">Export</span>
+</div>
+<div class="toolbar">
+    <button class="btn" onclick="switchTab('mission')">Mission Setup</button>
+    <div class="toolbar-sep"></div>
+    <button class="btn" onclick="switchTab('power')">Power Budget</button>
+    <button class="btn" onclick="switchTab('comms')">Link Budget</button>
+    <button class="btn" onclick="switchTab('mass')">Mass Budget</button>
+    <div class="toolbar-sep"></div>
+    <button class="btn" onclick="switchTab('catalogue')">Catalogues</button>
+    <button class="btn" onclick="switchTab('bom')">BOM</button>
+    <div class="toolbar-sep"></div>
+    <button class="btn" onclick="exportExcel()">Export Excel</button>
+    <div class="info" id="toolbarInfo"></div>
+</div>
+<div class="tabs">
+    <div class="tab active" data-tab="mission" onclick="switchTab('mission')">Mission</div>
+    <div class="tab" data-tab="power" onclick="switchTab('power')">Power Budget</div>
+    <div class="tab" data-tab="comms" onclick="switchTab('comms')">Comms</div>
+    <div class="tab" data-tab="mass" onclick="switchTab('mass')">Mass Budget</div>
+    <div class="tab" data-tab="catalogue" onclick="switchTab('catalogue')">Catalogues</div>
+    <div class="tab" data-tab="bom" onclick="switchTab('bom')">BOM</div>
+    <div class="tab" data-tab="standards" onclick="switchTab('standards')">Standards</div>
+</div>
+<div class="content">
+    <div class="tab-view" id="missionView"></div>
+    <div class="tab-view hidden" id="powerView"></div>
+    <div class="tab-view hidden" id="commsView"></div>
+    <div class="tab-view hidden" id="massView"></div>
+    <div class="tab-view hidden" id="catalogueView"></div>
+    <div class="tab-view hidden" id="bomView"></div>
+    <div class="tab-view hidden" id="standardsView"></div>
+</div>
+<div class="status-bar">
+    <div class="status-panel" id="statusLeft">Ready</div>
+    <div class="status-panel" id="statusRight" style="width:200px"></div>
+</div>
+
+<script>
+const TABS = ['mission','power','comms','mass','catalogue','bom','standards'];
+let missionData = {};
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmt(n) { return '$' + Math.round(n).toLocaleString(); }
+
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    TABS.forEach(t => document.getElementById(t+'View').classList.toggle('hidden', t !== tab));
+    if (tab === 'mission') loadMission();
+    if (tab === 'power') loadPower();
+    if (tab === 'comms') loadComms();
+    if (tab === 'mass') loadMass();
+    if (tab === 'catalogue') loadCatalogue();
+    if (tab === 'bom') loadBom();
+    if (tab === 'standards') loadStandards();
+}
+
+function setStatus(msg) { document.getElementById('statusLeft').textContent = msg; }
+
+// --- Mission Setup ---
+function loadMission() {
+    pywebview.api.get_mission().then(r => {
+        const d = typeof r === 'string' ? JSON.parse(r) : r;
+        if (d.status !== 'ok') return;
+        missionData = d;
+        const div = document.getElementById('missionView');
+        const orbitOpts = d.orbit_presets.map(o => `<option ${o === 'LEO-500' ? 'selected' : ''}>${o}</option>`).join('');
+        const ffOpts = d.form_factors.map(f => `<option ${f === d.form_factor ? 'selected' : ''}>${f}</option>`).join('');
+        div.innerHTML = `
+        <div class="tool-panel">
+            <h3>Mission Configuration</h3>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+                <div><label>Mission Name:</label><br><input type="text" id="missionName" value="${esc(d.name)}" style="width:250px"></div>
+                <div><label>Form Factor:</label><br><select id="formFactor">${ffOpts}</select></div>
+                <div><label>Orbit Preset:</label><br><select id="orbitPreset" onchange="document.getElementById('customAlt').disabled=this.value!=='Custom'">${orbitOpts}<option value="Custom">Custom...</option></select></div>
+                <div><label>Custom Altitude (km):</label><br><input type="number" id="customAlt" value="500" disabled></div>
+                <div><label>Mission Duration (years):</label><br><input type="number" id="missionYears" value="${d.mission_years}" min="1" max="15"></div>
+            </div>
+            <button class="btn" onclick="saveMission()">Apply Configuration</button>
+        </div>
+        <div class="summary-cards">
+            <div class="card"><h3>Form Factor</h3><div class="value">${d.form_factor}</div><div class="sub">Max ${d.limits.mass_kg} kg</div></div>
+            <div class="card"><h3>Altitude</h3><div class="value">${d.orbit.altitude_km} km</div></div>
+            <div class="card"><h3>Period</h3><div class="value">${d.orbit.period_min} min</div><div class="sub">~${Math.round(1440/d.orbit.period_min)} orbits/day</div></div>
+            <div class="card"><h3>Eclipse</h3><div class="value">${d.orbit.eclipse_min} min</div></div>
+            <div class="card"><h3>Sunlight</h3><div class="value">${d.orbit.sunlight_min} min</div></div>
+            <div class="card"><h3>Mission Life</h3><div class="value">${d.mission_years} yr</div></div>
+        </div>
+        <div class="ref-table">
+            <h3>CubeSat Form Factor Standards (CDS Rev 14)</h3>
+            <table><thead><tr><th>Form</th><th>Max Mass (kg)</th><th>Size (mm)</th><th>Volume (L)</th></tr></thead><tbody>
+            <tr><td><b>1U</b></td><td>1.33</td><td>100 x 100 x 113.5</td><td>1.0</td></tr>
+            <tr><td><b>1.5U</b></td><td>2.0</td><td>100 x 100 x 170.2</td><td>1.5</td></tr>
+            <tr><td><b>2U</b></td><td>2.66</td><td>100 x 100 x 227.0</td><td>2.0</td></tr>
+            <tr><td><b>3U</b></td><td>4.0</td><td>100 x 100 x 340.5</td><td>3.0</td></tr>
+            <tr><td><b>6U</b></td><td>12.0</td><td>200 x 100 x 340.5</td><td>6.0</td></tr>
+            <tr><td><b>12U</b></td><td>24.0</td><td>200 x 200 x 340.5</td><td>12.0</td></tr>
+            <tr><td><b>16U</b></td><td>32.0</td><td>200 x 200 x 454.0</td><td>16.0</td></tr>
+            <tr><td><b>27U</b></td><td>54.0</td><td>300 x 300 x 340.5</td><td>27.0</td></tr>
+            </tbody></table>
+        </div>`;
+    });
+}
+
+function saveMission() {
+    const name = document.getElementById('missionName').value;
+    const ff = document.getElementById('formFactor').value;
+    const preset = document.getElementById('orbitPreset').value;
+    const alt = document.getElementById('customAlt').value;
+    const years = document.getElementById('missionYears').value;
+    pywebview.api.set_mission(name, ff, preset, alt, years).then(r => {
+        const d = typeof r === 'string' ? JSON.parse(r) : r;
+        if (d.status === 'ok') {
+            document.querySelector('.title-bar .title-text').textContent = `CubeSat Builder - [${name}]`;
+            setStatus(`Mission configured: ${name} | ${ff} | ${d.orbit.altitude_km}km`);
+            loadMission();
+        }
+    });
+}
+
+// --- Power Budget ---
+function loadPower() {
+    pywebview.api.get_power_budget().then(r => {
+        const d = typeof r === 'string' ? JSON.parse(r) : r;
+        if (d.status !== 'ok') return;
+        const div = document.getElementById('powerView');
+        const b = d.budget;
+        let html = `
+        <div class="summary-cards">
+            <div class="card"><h3>Safe Mode</h3><div class="value">${b.safe_w} W</div></div>
+            <div class="card"><h3>Nominal</h3><div class="value">${b.nominal_w} W</div></div>
+            <div class="card"><h3>Peak</h3><div class="value">${b.peak_w} W</div></div>
+            <div class="card"><h3>Orbit Average</h3><div class="value">${b.average_w} W</div></div>
+            <div class="card"><h3>Solar Required</h3><div class="value">${b.solar_required_w} W</div><div class="sub">Incl. eclipse charging</div></div>
+            <div class="card"><h3>Battery Required</h3><div class="value">${b.battery_required_wh} Wh</div><div class="sub">Eclipse survival</div></div>
+        </div>`;
+
+        // Subsystem table
+        html += `<div class="ref-table"><h3>Subsystem Power Breakdown</h3>
+        <table><thead><tr><th>Subsystem</th><th>Category</th><th>Safe (W)</th><th>Nominal (W)</th><th>Peak (W)</th><th>Duty %</th><th>Avg (W)</th></tr></thead><tbody>`;
+        d.subsystems.forEach((s, i) => {
+            const avg = (s.nominal_w * s.duty_pct / 100).toFixed(2);
+            html += `<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.category||'')}</td><td>${s.safe_w}</td><td>${s.nominal_w}</td><td>${s.peak_w}</td><td>${s.duty_pct}</td><td>${avg}</td></tr>`;
+        });
+        html += `<tr style="background:#e8e8e0;font-weight:700"><td>TOTAL</td><td></td><td>${b.safe_w}</td><td>${b.nominal_w}</td><td>${b.peak_w}</td><td></td><td>${b.average_w}</td></tr>`;
+        html += `</tbody></table></div>`;
+
+        // Add subsystem form
+        html += `<div class="tool-panel"><h3>Add Subsystem</h3>
+            <label>Name:</label><input type="text" id="newSubName" style="width:120px">
+            <label>Category:</label><select id="newSubCat"><option>Payload</option><option>Avionics</option><option>Comms</option><option>ADCS</option><option>Power</option><option>Thermal</option><option>Propulsion</option><option>Other</option></select>
+            <label>Safe W:</label><input type="number" id="newSubSafe" value="0" style="width:50px">
+            <label>Nom W:</label><input type="number" id="newSubNom" value="1" style="width:50px">
+            <label>Peak W:</label><input type="number" id="newSubPeak" value="2" style="width:50px">
+            <label>Duty %:</label><input type="number" id="newSubDuty" value="100" style="width:50px">
+            <button class="btn" onclick="addSubsystem()" style="margin-left:8px">Add</button>
+            <button class="btn" onclick="importPowerBudget()" style="margin-left:4px">Import from Excel...</button>
+        </div>`;
+
+        // Solar sizing
+        const s = d.solar;
+        html += `<div class="ref-table"><h3>Solar Panel Sizing</h3>
+            <table><tbody>
+            <tr><td style="width:180px">Cell Type</td><td><b>${esc(s.cell_type)}</b> (${(s.efficiency*100).toFixed(1)}% eff)</td></tr>
+            <tr><td>EOL Degradation</td><td>${((1-s.eol_factor)*100).toFixed(1)}% over mission life</td></tr>
+            <tr><td>Required Power (BOL)</td><td><b>${s.required_w_bol} W</b></td></tr>
+            <tr><td>Required Power (EOL)</td><td>${s.required_w_eol} W</td></tr>
+            <tr><td>Panel Area</td><td><b>${s.area_cm2} cm2</b> (${s.area_m2} m2)</td></tr>
+            <tr><td>Number of Cells</td><td>${s.num_cells} cells</td></tr>
+            <tr><td>Panel Mass</td><td>${s.mass_kg} kg</td></tr>
+            <tr><td>Panel Cost</td><td><b>${fmt(s.cost_usd)}</b></td></tr>
+            </tbody></table></div>`;
+
+        // EPS matches
+        if (d.eps_matches.length > 0) {
+            html += `<div class="ref-table"><h3>Recommended EPS (matched to power requirements)</h3>
+            <table><thead><tr><th>Vendor</th><th>Model</th><th>Form</th><th>Solar (W)</th><th>Battery (Wh)</th><th>Channels</th><th>Mass (g)</th><th>Cost</th><th></th></tr></thead><tbody>`;
+            d.eps_matches.forEach(e => {
+                const sel = d.selected_eps && d.selected_eps.model === e.model;
+                html += `<tr class="${sel?'selected-row':''}"><td>${esc(e.vendor)}</td><td><b>${esc(e.model)}</b></td><td>${esc(e.form)}</td><td>${e.max_solar_w}</td><td>${e.battery_wh}</td><td>${e.channels}</td><td>${e.mass_g}</td><td>${fmt(e.cost_usd)}</td><td><button class="btn" onclick="selectEps('${esc(e.model)}')">${sel?'Selected':'Select'}</button></td></tr>`;
+            });
+            html += `</tbody></table></div>`;
+        }
+        div.innerHTML = html;
+    });
+}
+
+function addSubsystem() {
+    const name = document.getElementById('newSubName').value;
+    if (!name) { alert('Enter a subsystem name.'); return; }
+    pywebview.api.add_subsystem(name, document.getElementById('newSubCat').value,
+        document.getElementById('newSubSafe').value, document.getElementById('newSubNom').value,
+        document.getElementById('newSubPeak').value, document.getElementById('newSubDuty').value
+    ).then(() => loadPower());
+}
+
+function importPowerBudget() {
+    pywebview.api.import_power_budget().then(r => {
+        const d = typeof r === 'string' ? JSON.parse(r) : r;
+        if (d.status === 'ok') { setStatus(`Imported ${d.count} subsystems from ${d.filename}`); loadPower(); }
+        else if (d.status === 'error') alert('Error: ' + d.message);
+    });
+}
+
+function selectEps(model) {
+    pywebview.api.select_eps(model).then(r => {
+        const d = typeof r === 'string' ? JSON.parse(r) : r;
+        if (d.status === 'ok') { setStatus(`Selected EPS: ${model}`); loadPower(); }
+    });
+}
+
+// --- Comms ---
+function loadComms() {
+    const div = document.getElementById('commsView');
+    div.innerHTML = `
+    <div class="tool-panel"><h3>Link Budget Calculator</h3>
+        <label>Band:</label>
+        <select id="commsBand"><option value="">All</option><option>UHF</option><option>VHF</option><option>S-Band</option><option>X-Band</option><option>L-Band</option></select>
+        <label style="margin-left:8px">TX Antenna Gain (dBi):</label><input type="number" id="txGain" value="0" style="width:60px">
+        <label style="margin-left:8px">GS RX Gain (dBi):</label><input type="number" id="rxGain" value="12" style="width:60px">
+        <button class="btn" onclick="calcLink()" style="margin-left:8px">Calculate</button>
+    </div>
+    <div id="commsResults"></div>`;
+}
+
+function calcLink() {
+    const band = document.getElementById('commsBand').value;
+    const txG = document.getElementById('txGain').value;
+    const rxG = document.getElementById('rxGain').value;
+    pywebview.api.get_link_budget(band, txG, rxG).then(r => {
+        const d = typeof r === 'string' ? JSON.parse(r) : r;
+        if (d.status !== 'ok') return;
+        const div = document.getElementById('commsResults');
+        let html = `<div class="ref-table"><h3>Link Budget Results (${d.orbit.altitude_km}km orbit, 5 deg min elevation)</h3>
+        <table><thead><tr><th>Vendor</th><th>Model</th><th>Band</th><th>Freq (MHz)</th><th>TX (W)</th><th>Data Rate</th><th>Power (W)</th><th>Mass (g)</th><th>Cost</th><th>FSPL (dB)</th><th>Eb/N0 (dB)</th><th>Margin (dB)</th><th>Pass (min)</th><th></th></tr></thead><tbody>`;
+        d.results.forEach(r => {
+            const mc = r.link.margin_ok ? 'link-ok' : 'link-bad';
+            const sel = d.selected_radio && d.selected_radio.model === r.model;
+            const drStr = r.data_rate_kbps >= 1000 ? (r.data_rate_kbps/1000)+'Mbps' : r.data_rate_kbps+'kbps';
+            html += `<tr class="${sel?'selected-row':''}"><td>${esc(r.vendor)}</td><td><b>${esc(r.model)}</b></td><td>${esc(r.band)}</td><td>${r.freq_mhz}</td><td>${r.tx_power_w}</td><td>${drStr}</td><td>${r.power_w}</td><td>${r.mass_g}</td><td>${fmt(r.cost_usd)}</td><td>${r.link.fspl_db}</td><td>${r.link.eb_n0_db}</td><td class="${mc}">${r.link.margin_db}</td><td>${r.link.pass_duration_min}</td><td><button class="btn" onclick="selectRadio('${esc(r.model)}')">${sel?'Selected':'Select'}</button></td></tr>`;
+        });
+        html += `</tbody></table><p style="font-size:10px;color:#666;margin-top:4px">Link margin >= 3 dB is acceptable. Green = closes, Red = does not close.</p></div>`;
+        div.innerHTML = html;
+    });
+}
+
+function selectRadio(model) {
+    pywebview.api.select_radio(model).then(r => {
+        const d = typeof r === 'string' ? JSON.parse(r) : r;
+        if (d.status === 'ok') { setStatus(`Selected radio: ${model}`); calcLink(); }
+    });
+}
+
+// --- Mass Budget ---
+function loadMass() {
+    pywebview.api.get_mass_budget().then(r => {
+        const d = typeof r === 'string' ? JSON.parse(r) : r;
+        if (d.status !== 'ok') return;
+        const div = document.getElementById('massView');
+        const mc = d.margin_pct > 20 ? 'ok' : d.margin_pct > 0 ? 'warn' : 'danger';
+        let html = `
+        <div class="summary-cards">
+            <div class="card"><h3>Total Mass</h3><div class="value">${d.total_kg} kg</div><div class="sub">of ${d.max_kg} kg max</div></div>
+            <div class="card ${mc}"><h3>Margin</h3><div class="value">${d.margin_pct}%</div><div class="sub">${d.margin_kg} kg remaining</div></div>
+            <div class="card"><h3>Form Factor</h3><div class="value">${d.form_factor}</div></div>
+        </div>`;
+
+        html += `<div class="ref-table"><h3>Mass Breakdown</h3>
+        <table><thead><tr><th>Component</th><th>Category</th><th>Mass (kg)</th><th>Source</th></tr></thead><tbody>`;
+        d.items.forEach(m => {
+            html += `<tr><td><b>${esc(m.name)}</b></td><td>${esc(m.category)}</td><td>${m.mass_kg}</td><td>${esc(m.source)}</td></tr>`;
+        });
+        html += `<tr style="background:#e8e8e0;font-weight:700"><td>TOTAL</td><td></td><td>${d.total_kg}</td><td></td></tr>`;
+        html += `</tbody></table></div>`;
+
+        // Mass margin bar
+        const pct = Math.min((d.total_kg / d.max_kg) * 100, 100);
+        const barColor = d.margin_pct > 20 ? '#4caf50' : d.margin_pct > 0 ? '#ff9800' : '#f44336';
+        html += `<div style="background:#e0dcd4;height:20px;border:1px inset;margin-bottom:12px"><div style="background:${barColor};height:100%;width:${pct}%;display:flex;align-items:center;padding-left:4px;color:white;font-weight:700;font-size:10px">${pct.toFixed(1)}% used</div></div>`;
+
+        html += `<div class="tool-panel"><h3>Add Mass Item</h3>
+            <label>Name:</label><input type="text" id="massName" style="width:150px">
+            <label>Category:</label><select id="massCat"><option>Structure</option><option>Payload</option><option>Harness</option><option>Thermal</option><option>Propulsion</option><option>Other</option></select>
+            <label>Mass (g):</label><input type="number" id="massG" value="0" style="width:70px">
+            <label>Notes:</label><input type="text" id="massNotes" style="width:150px">
+            <button class="btn" onclick="addMassItem()" style="margin-left:8px">Add</button>
+        </div>`;
+
+        html += `<p style="font-size:10px;color:#666">Mass margin guidance: >20% at PDR, >10% at CDR, >5% at flight. Items from selected components (EPS, radio, ADCS, OBC, solar) are auto-included.</p>`;
+        div.innerHTML = html;
+    });
+}
+
+function addMassItem() {
+    const name = document.getElementById('massName').value;
+    if (!name) { alert('Enter a name.'); return; }
+    pywebview.api.add_mass_item(name, document.getElementById('massCat').value,
+        document.getElementById('massG').value, document.getElementById('massNotes').value
+    ).then(() => loadMass());
+}
+
+// --- Catalogues ---
+function loadCatalogue() {
+    const div = document.getElementById('catalogueView');
+    div.innerHTML = `
+    <div style="margin-bottom:8px">
+        <button class="btn" onclick="showCat('eps')">EPS</button>
+        <button class="btn" onclick="showCat('radio')">Radios</button>
+        <button class="btn" onclick="showCat('adcs')">ADCS</button>
+        <button class="btn" onclick="showCat('obc')">OBC</button>
+    </div>
+    <div id="catContent"></div>`;
+    showCat('eps');
+}
+
+function showCat(type) {
+    pywebview.api.get_catalogue(type).then(r => {
+        const d = typeof r === 'string' ? JSON.parse(r) : r;
+        const div = document.getElementById('catContent');
+        const titles = {eps:'Electrical Power Systems', radio:'Radio Transceivers', adcs:'Attitude Determination & Control', obc:'On-Board Computers'};
+        let html = `<div class="ref-table"><h3>${titles[type] || type} Catalogue</h3><table><thead><tr>`;
+        if (d.items.length === 0) { div.innerHTML = '<p>No items.</p>'; return; }
+        const keys = Object.keys(d.items[0]).filter(k => k !== 'cost_usd');
+        keys.forEach(k => html += `<th>${k.replace(/_/g,' ')}</th>`);
+        html += `<th>Cost (USD)</th><th></th></tr></thead><tbody>`;
+        d.items.forEach(item => {
+            html += `<tr>`;
+            keys.forEach(k => html += `<td>${typeof item[k]==='number'? item[k] : esc(String(item[k]||''))}</td>`);
+            html += `<td style="font-weight:700">${fmt(item.cost_usd)}</td>`;
+            html += `<td><button class="btn" onclick="selectComp('${type}','${esc(item.model)}')">Select</button></td></tr>`;
+        });
+        html += `</tbody></table></div>`;
+        div.innerHTML = html;
+    });
+}
+
+function selectComp(type, model) {
+    pywebview.api.select_component(type, model).then(r => {
+        const d = typeof r === 'string' ? JSON.parse(r) : r;
+        if (d.status === 'ok') setStatus(`Selected ${type.toUpperCase()}: ${model}`);
+    });
+}
+
+// --- BOM ---
+function loadBom() {
+    pywebview.api.get_bom().then(r => {
+        const d = typeof r === 'string' ? JSON.parse(r) : r;
+        if (d.status !== 'ok') return;
+        const div = document.getElementById('bomView');
+        let html = `
+        <div class="summary-cards">
+            <div class="card"><h3>Total Cost</h3><div class="value">${fmt(d.total_cost_usd)}</div></div>
+            <div class="card"><h3>Total Mass</h3><div class="value">${d.total_mass_kg} kg</div><div class="sub">${d.total_mass_g} g</div></div>
+            <div class="card"><h3>Components</h3><div class="value">${d.items.length}</div></div>
+        </div>`;
+
+        html += `<div class="ref-table"><h3>Bill of Materials</h3>
+        <table><thead><tr><th>Category</th><th>Vendor</th><th>Model</th><th>Qty</th><th>Mass (g)</th><th>Unit Cost</th><th>Total</th></tr></thead><tbody>`;
+        d.items.forEach(b => {
+            const total = b.cost_usd * (b.qty || 1);
+            html += `<tr><td>${esc(b.category)}</td><td>${esc(b.vendor)}</td><td><b>${esc(b.model)}</b></td><td>${b.qty||1}</td><td>${b.mass_g}</td><td>${fmt(b.cost_usd)}</td><td style="font-weight:700">${fmt(total)}</td></tr>`;
+        });
+        html += `<tr style="background:#e8e8e0;font-weight:700"><td colspan="4">TOTAL</td><td>${d.total_mass_g}</td><td></td><td>${fmt(d.total_cost_usd)}</td></tr>`;
+        html += `</tbody></table></div>`;
+
+        html += `<div class="tool-panel"><h3>Add Custom Item</h3>
+            <label>Category:</label><input type="text" id="bomCat" style="width:80px" value="Other">
+            <label>Vendor:</label><input type="text" id="bomVendor" style="width:100px">
+            <label>Model:</label><input type="text" id="bomModel" style="width:120px">
+            <label>Mass (g):</label><input type="number" id="bomMass" value="0" style="width:60px">
+            <label>Cost (USD):</label><input type="number" id="bomCost" value="0" style="width:80px">
+            <label>Qty:</label><input type="number" id="bomQty" value="1" style="width:40px">
+            <button class="btn" onclick="addBomItem()" style="margin-left:8px">Add</button>
+        </div>`;
+        div.innerHTML = html;
+    });
+}
+
+function addBomItem() {
+    pywebview.api.add_bom_item(
+        document.getElementById('bomCat').value, document.getElementById('bomVendor').value,
+        document.getElementById('bomModel').value, document.getElementById('bomMass').value,
+        document.getElementById('bomCost').value, document.getElementById('bomQty').value
+    ).then(() => loadBom());
+}
+
+// --- Standards ---
+function loadStandards() {
+    document.getElementById('standardsView').innerHTML = `
+    <div style="padding:8px;overflow-y:auto;height:100%">
+    <div class="ref-table"><h3>CubeSat Design Specification (CDS Rev 14)</h3>
+    <table><thead><tr><th>Requirement</th><th>Value</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>Rail material</td><td>Aluminium 7075 or 6061-T6</td><td>Hard anodised</td></tr>
+    <tr><td>Rail width</td><td>8.5 mm min</td><td>Contact surface with deployer</td></tr>
+    <tr><td>CG offset from geometric centre</td><td>+/- 2 cm (1U-3U), +/- 4.5 cm (6U+)</td><td>All axes</td></tr>
+    <tr><td>Deployment switches</td><td>Minimum 1 (3 recommended)</td><td>Inhibit all RF and actuators</td></tr>
+    <tr><td>No pyrotechnics</td><td>Mandatory</td><td>Use burn wire or shape memory alloy</td></tr>
+    <tr><td>Battery charge</td><td>Fully charged before delivery</td><td>Cells must not be over-discharged</td></tr>
+    <tr><td>Random vibration</td><td>14.1 Grms</td><td>Protoflight qualification level</td></tr>
+    </tbody></table></div>
+
+    <div class="ref-table"><h3>Space Environment Standards</h3>
+    <table><thead><tr><th>Standard</th><th>Title</th><th>Relevance</th></tr></thead><tbody>
+    <tr><td><b>ECSS-E-ST-10C</b></td><td>Space engineering - System engineering</td><td>Systems engineering process for space missions</td></tr>
+    <tr><td><b>ECSS-E-ST-20C</b></td><td>Electrical and electronic engineering</td><td>Power system design, EPS requirements, harness</td></tr>
+    <tr><td><b>ECSS-E-ST-50C</b></td><td>Communications</td><td>Data bus standards, RF link design</td></tr>
+    <tr><td><b>ECSS-Q-ST-30C</b></td><td>Dependability</td><td>Reliability, component derating, redundancy</td></tr>
+    <tr><td><b>ECSS-E-ST-10-04C</b></td><td>Space environment</td><td>Radiation, thermal, debris environment models</td></tr>
+    <tr><td><b>MIL-STD-461G</b></td><td>EMI/EMC requirements</td><td>Electromagnetic compatibility for space electronics</td></tr>
+    <tr><td><b>NASA-STD-8739.1</b></td><td>Workmanship - Soldering</td><td>PCB assembly and soldering standards</td></tr>
+    <tr><td><b>ITU Radio Regulations</b></td><td>Frequency allocation</td><td>Amateur (UHF 435-438 MHz), ISM, licensed S/X-band</td></tr>
+    <tr><td><b>ISO 17770</b></td><td>CubeSat deployer interface</td><td>Mechanical interface with launch vehicle</td></tr>
+    <tr><td><b>UN COPUOS Guidelines</b></td><td>Space debris mitigation</td><td>25-year deorbit requirement for LEO</td></tr>
+    </tbody></table></div>
+
+    <div class="ref-table"><h3>Component Derating Guidelines (ECSS-Q-ST-30-11C)</h3>
+    <table><thead><tr><th>Component</th><th>Parameter</th><th>Derating Factor</th></tr></thead><tbody>
+    <tr><td>Capacitor (ceramic)</td><td>Voltage</td><td>50% of rated</td></tr>
+    <tr><td>Capacitor (tantalum)</td><td>Voltage</td><td>60% of rated</td></tr>
+    <tr><td>Resistor</td><td>Power</td><td>50% of rated</td></tr>
+    <tr><td>Transistor (MOSFET)</td><td>Vds</td><td>75% of rated</td></tr>
+    <tr><td>Diode</td><td>Reverse voltage</td><td>75% of rated</td></tr>
+    <tr><td>IC (digital)</td><td>Junction temp</td><td>Tj max - 25 deg C</td></tr>
+    <tr><td>Solar cell</td><td>Power output</td><td>Apply EOL degradation + 20% margin</td></tr>
+    <tr><td>Battery (Li-ion)</td><td>Depth of discharge</td><td>Max 20-30% DoD for LEO cycling</td></tr>
+    </tbody></table></div>
+
+    <div class="ref-table"><h3>Frequency Allocations for CubeSats</h3>
+    <table><thead><tr><th>Band</th><th>Frequency</th><th>Typical Use</th><th>Licence</th><th>Data Rate</th></tr></thead><tbody>
+    <tr><td><b>VHF</b></td><td>145-146 MHz</td><td>Beacon, telemetry</td><td>Amateur</td><td>1.2-9.6 kbps</td></tr>
+    <tr><td><b>UHF</b></td><td>435-438 MHz</td><td>TT&C, low-rate data</td><td>Amateur</td><td>9.6-19.2 kbps</td></tr>
+    <tr><td><b>L-Band</b></td><td>1.5-1.6 GHz</td><td>Relay (Globalstar/Iridium)</td><td>Licensed</td><td>9.6-256 kbps</td></tr>
+    <tr><td><b>S-Band</b></td><td>2.2-2.4 GHz</td><td>Medium-rate downlink</td><td>Licensed / ISM</td><td>1-10 Mbps</td></tr>
+    <tr><td><b>X-Band</b></td><td>8.0-8.4 GHz</td><td>High-rate downlink</td><td>Licensed</td><td>10-150 Mbps</td></tr>
+    <tr><td><b>Ka-Band</b></td><td>26-40 GHz</td><td>Very high-rate</td><td>Licensed</td><td>100+ Mbps</td></tr>
+    </tbody></table></div>
+
+    <div class="ref-table"><h3>Thermal Environment (LEO)</h3>
+    <table><thead><tr><th>Parameter</th><th>Value</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>Solar constant</td><td>1361 W/m2</td><td>At 1 AU</td></tr>
+    <tr><td>Earth albedo</td><td>~0.3</td><td>Reflected solar</td></tr>
+    <tr><td>Earth IR</td><td>~237 W/m2</td><td>Thermal emission from Earth</td></tr>
+    <tr><td>Deep space</td><td>~3 K (-270 deg C)</td><td>Background radiation</td></tr>
+    <tr><td>Sunlit face temp</td><td>+60 to +80 deg C</td><td>Without thermal control</td></tr>
+    <tr><td>Shadow face temp</td><td>-40 to -80 deg C</td><td>Without thermal control</td></tr>
+    <tr><td>Electronics range</td><td>-20 to +60 deg C</td><td>Typical operating</td></tr>
+    <tr><td>Battery range</td><td>0 to +45 deg C</td><td>Charge range (more restrictive)</td></tr>
+    </tbody></table></div>
+    </div>`;
+}
+
+function exportExcel() {
+    pywebview.api.export_excel().then(r => {
+        const d = typeof r === 'string' ? JSON.parse(r) : r;
+        if (d.status === 'ok') { setStatus('Exported to Excel'); alert('Excel exported:\n\n' + d.filepath); }
+        else if (d.status === 'error') alert('Error:\n\n' + d.message);
+    });
+}
+
+// Initial load
+window.addEventListener('pywebviewready', () => loadMission());
+</script>
+</body>
+</html>
